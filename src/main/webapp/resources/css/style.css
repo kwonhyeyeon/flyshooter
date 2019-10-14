@@ -76,6 +76,7 @@
     background:#fff;
 }
 #main-gnb {
+	clear:both;
 	width:1000px;
 	height:100px;
 	margin:300px auto 0;
@@ -105,6 +106,23 @@
 }
 #main-gnb ul li a:hover {
 	background:rgba(255,255,255,0.2);
+}
+
+#main-lnb.client {
+	display:flex;
+	justify-content:space-between;
+	flex-direction:row;
+}
+#main-lnb.client .main-stat ul li {
+	float:left;
+	width:auto;
+	color:#fff;
+	text-align:left;
+	margin-right:10px;
+}
+#main-lnb.client .main-stat ul li a {
+	margin-left:10px;
+	font-weight:bold;
 }
 
 /* index end */
