@@ -29,13 +29,7 @@ $(document).ready(function() {
 
 	$(document).on("click", "#selectTime input", function() {
 		
-		if($("#selectItem").is(":visible")) {
-			$(".i_ea").on("change", function() {
-				$("#goRentalBtn").show(); // 결제 버튼 show
-			});
-		} else {
-			$("#goRentalBtn").show(); // 결제 버튼 show
-		}
+		$("#goRentalBtn").show(); // 결제 버튼 show
 		
 	});
 	
@@ -134,6 +128,7 @@ $(document).ready(function() {
     $("#stadiumSelectBox").change(function() {
     	$(".calTit").show();
     	$(".stadiumCal").show();
+    	$("#goRentalBtn").hide(); // 결제 버튼 hide
         var selectDay = selectedDay();
         var p_open = $("#p_open").val();
         var p_close = $("#p_close").val();
