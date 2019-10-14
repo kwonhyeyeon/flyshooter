@@ -40,6 +40,9 @@ $(document).ready(function(){
 				<c:if test="${not empty mvo.m_id}">
 				<nav id="main-lnb" class="client">
 					<c:if test="${mvo.m_type eq 0}">
+						<ul>
+							<li><a href="/member/logout.do">로그아웃</a></li>
+						</ul>
 						<div class="main-stat">
 							<ul>
 								<li>오늘의 대관<a class="stat" href="/client/rental/rentalList.do">${todayRental}건</a></li>
@@ -48,9 +51,6 @@ $(document).ready(function(){
 							</ul>
 						</div>
 					</c:if>
-					<ul>
-						<li><a href="/member/logout.do">로그아웃</a></li>
-					</ul>
 				</nav>
 				</c:if>
 

@@ -111,7 +111,6 @@
 #main-lnb.client {
 	display:flex;
 	justify-content:space-between;
-	flex-direction:row;
 }
 #main-lnb.client .main-stat ul li {
 	float:left;
