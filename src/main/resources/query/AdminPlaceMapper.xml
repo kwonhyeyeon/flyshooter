@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fly.admin.place.dao.AdminPlaceDao">
+
+	<!-- 구장 리스트 -->
+	<!-- 폐업 -2, 임시휴업 -1, 운영전 0, 운영중 1, 전체 2 -->
+	<!-- 구장명 검색 -->
+	<select id="adminPlaceList" parameterType="place" resultType="place">		
+		select p.m_id, p.p_ceo, p.p_name, p.p_ok, to_char(p.p_regdate, 'yyyy/MM/dd') p_regdate, p_num,
+			(select count(*) 
+			from stadium s 
+			where s.p_num = p.p_num and s.s_status = 0) p_holiday,
+			to_char(p_holiday_start, 'yyyy/MM/dd') p_holiday_start
+		from (
+			select rownum rnum, r.*
+			from (
+				select *
+				from place
+				<where>
+					<if test='p_status != 2'>
+						p_status = #{p_status}
+					</if>
+					
+					<if test='p_name != null and p_name != ""'>
+						<![CDATA[
+						p_name like '%'||#{p_name}||'%'
+						]]>
+					</if>
+				</where>
+				order by p_regdate desc
+			) r
+		) p
+		<where>
+	    	<if test="start_row != null and start_row != ''">
+	        	<if test="end_row != null and end_row != ''">
+	            	RNUM BETWEEN #{start_row} and #{end_row}
+	            </if>   
+	        </if>
+	    </where>
+	</select>
+	
+	<!-- paging -->
+	<select  id="adminPlaceListCnt" parameterType="place" resultType="int">
+		select count(*)
+		from place
+		<where>
+			<if test='p_status != 2'>
+				p_status = #{p_status}
+			</if>
+					
+			<if test='p_name != null and p_name != ""'>
+				<![CDATA[
+					p_name like '%'||#{p_name}||'%'
+				]]>
+			</if>
+		</where>
+	</select>
+	
+	<!-- 구장 상세 정보 -->
+	<select id="adminPlaceDetail" parameterType="String" resultType="place">
+		select p_num, m_id, p_name, p_ceo, p_phone, p_address,
+	      p_bank, p_account,
+	      p_account_num, p_open, p_close, p_file,
+	      p_register, p_account_copy,p_property,
+	      p_status, to_char(p_holiday_start, 'yyyy/MM/dd') p_holiday_start, 
+	      to_char(p_holiday_end, 'yyyy/MM/dd') p_holiday_end, 
+	      p_ok, to_char(p_ok_date, 'yyyy/MM/dd') p_ok_date, p_intro, to_char(p_regdate, 'yyyy/MM/dd') p_regdate, p_holiday
+		from place
+		where p_num = #{p_num}
+	</select>
+	
+	<!-- 폐업으로 변경 시 변경된 날짜 가져옴 -->
+	<update id="getCloseDate" parameterType="place">
+		UPDATE place
+		SET p_holiday_start = sysdate
+		WHERE p_status = -2 and p_num = #{p_num}
+	</update>
+	
+	<!-- 구장 승인 상태 변경 -->
+	<update id="updatePok" parameterType="place">
+        UPDATE place
+        SET p_ok = 1
+        WHERE p_num = #{p_num}
+    </update>
+    
+    <select id="getRentalCnt" parameterType="String" resultType="int">
+    	select count(*)
+		from rental
+		where s_no in(
+		    select s_no 
+		    from stadium 
+		    where p_num = (
+		    	select p_num 
+		        from place 
+		        where p_num = #{p_num})
+		    	)
+		    and to_char(r_reserve_date, 'yyyy/MM/dd') > to_char(sysdate, 'yyyy/MM/dd')
+    </select>
+	
+	<!-- 구장 폐업 등록 -->
+	<update id="updateClose" parameterType="place">
+		update place
+		set p_status = -2, p_ok = 0
+		where p_num = #{p_num}
+	</update>
+	
+	<!-- 사업자가 요청한 환불 리스트 -->
+	<select id="getClientRefund" parameterType="rental" resultMap="getClientRefund">
+		SELECT to_char(r.r_recall_time, 'yyyy/MM/dd') r_recall_time, 
+		r.r_total_pay, r.r_pay_status, r.r_no,
+		to_char(r.refund_day, 'yyyy/MM/dd') refund_day,
+		p.m_id as client, p.p_ceo
+		FROM (SELECT ROWNUM RNUM , rn.* 
+			   FROM (SELECT * 
+			      	 FROM rental
+			      	 <where>
+			      	 	<if test='r_pay_status == -1'>
+			      	 		r_pay_status = -1
+			      	 	</if>
+			      	 	<if test='r_pay_status == 2'>
+			      	 		r_pay_status = 2
+			      	 	</if>
+			      	 	<if test='r_pay_status == 0'>
+			      	 		r_pay_status in (-1, 2)
+			      	 	</if>
+			      	 </where>
+			         order by r_recall_time desc) rn
+			         ) r, stadium s, place p, member m
+		WHERE r.s_no = s.s_no
+		and s.p_num = p.p_num
+		and r.m_id = m.m_id
+		<if test="start_row != null and start_row != ''">
+	    	<if test="end_row != null and end_row != ''">
+	        	and RNUM BETWEEN #{start_row} and #{end_row}
+	        </if>   
+	    </if>
+	</select>
+	
+	<!-- 환불 상세페이지 -->
+	<select id="refundDetail" parameterType="int" resultMap="getClientRefund">
+		SELECT to_char(r.r_recall_time, 'yyyy/MM/dd') r_recall_time, r.r_total_pay, r.r_pay_status, r.m_id as mem, r.r_start,
+		to_char(r.r_regdate, 'yyyy/MM/dd') r_regdate, to_char(r.r_reserve_date, 'yyyy/MM/dd') r_reserve_date,
+		to_char(r.refund_day, 'yyyy/MM/dd') refund_day, r.r_no,
+		p.m_id as client, p.p_ceo, p.p_name, 
+		s.s_no, s.s_name, s.s_hours,
+		m.m_name, m.m_phone,
+		r.r_pay_type, r.r_bank, r.r_account, r.r_account_num
+		FROM (SELECT ROWNUM RNUM , rn.* 
+			   FROM (SELECT * 
+			      	 FROM rental) rn
+			         ) r, stadium s, place p, member m
+		WHERE r.s_no = s.s_no
+		and s.p_num = p.p_num
+		and r.m_id = m.m_id
+		and r.r_no = #{r_no}
+	</select>
+	<resultMap type="hashMap" id="getClientRefund">
+        <result column="r_recall_time" property="recall_time"/>
+        <result column="r_total_pay" property="total_pay"/>
+        <result column="r_pay_status" property="pay_status"/>
+        <result column="mem" property="mem"/>
+        <result column="r_start" property="start"/>
+        <result column="r_regdate" property="regdate"/>
+        <result column="r_reserve_date" property="reserve_date"/>
+        <result column="client" property="client"/>
+        <result column="p_ceo" property="ceo"/>
+        <result column="p_name" property="p_name"/>
+        <result column="s_no" property="s_no"/>
+        <result column="s_name" property="s_name"/>
+        <result column="s_hours" property="hours"/>
+        <result column="m_name" property="m_name"/>
+        <result column="m_phone" property="m_phone"/>
+        <result column="refund_day" property="refund_day"/>
+        <result column="r_pay_type" property="pay_type"/>
+        <result column="r_bank" property="bank"/>
+        <result column="r_account" property="account"/>
+        <result column="r_account_num" property="account_num"/>
+        <result column="r_no" property="r_no"/>
+    </resultMap>
+    
+    <select id="clientRefundCnt" parameterType="rental" resultType="int">
+    	select count(*)
+		from rental
+		where r_pay_status in(-1, 2)
+    </select>
+    
+    <!-- 환불 상태 변경 -->
+    <update id="updateRefund" parameterType="int">
+    	update rental
+		set r_pay_status = -1
+		where r_no = #{r_no}
+    </update>
+    <!-- 환불 상태 변경 시 지급일 가져옴 -->
+	<update id="getRefundDay" parameterType="int">
+		UPDATE rental
+		SET refund_day = sysdate
+		WHERE r_pay_status = -1 and r_no = #{r_no}
+	</update>
+	
+</mapper>

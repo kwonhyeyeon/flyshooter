@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fly.client.rental.dao.clientRentalDao">
+
+	<!-- 구장 리스트 -->
+	<select id="placeList" parameterType="String" resultType="place">
+		select p_name, p_num
+		from place
+		where 	1 = 1
+				and m_id = #{m_id} 
+				and p_status in(-1, 1)
+		order by p_regdate asc
+	</select>
+	
+	<!-- 경기장 리스트 -->
+	<select id="stadiumList" parameterType="String" resultType="stadium">
+		select s_name, s_no
+		from stadium
+		where 	1 = 1 
+				and p_num = #{p_num}
+				and s_status = 1
+	</select>
+
+	<!-- 대관 리스트 -->
+	<select id="rentalList" parameterType="hashmap" resultType="rental" >
+		SELECT r.m_id
+				, r.r_no
+				, m.m_name r_bank
+				, m.m_phone r_account
+				,r.r_start
+				, s.s_hours cal_status
+				,(SELECT count(*) 
+				  FROM items_rental 
+					WHERE r_no = r.r_no) refund
+				, r.r_pay_status
+				,to_char(r.r_regdate, 'yyyy-MM-dd') r_regdate
+				, r.r_total_pay
+				,CASE
+                    WHEN to_char(r.r_reserve_date, 'yyyy-MM-dd') <![CDATA[ > ]]> to_char(sysdate, 'yyyy-MM-dd') THEN -1
+                    WHEN (SELECT count(*) 
+                    		FROM items_rental 
+                    		WHERE 1 = 1
+                    				and r_no = r.r_no 
+                    				and ir_return_status = 1) <![CDATA[  > ]]> 0 THEN 1
+                    else 2
+					END r_pay_type
+				  
+				  
+		FROM rental r, member m, stadium s
+		WHERE 	1 = 1
+				and r.m_id = m.m_id 
+				and r.s_no = s.s_no  
+				and r.r_pay_status in(1, 0, 2) 
+				and r.s_no = #{s_no}  
+				and to_char(r.r_reserve_date, 'yyyy-MM-dd') = #{selectDay}
+		ORDER BY to_number(r.r_start) asc
+	</select>
+	
+	<!-- 환불 리스트 -->
+	<select id="getRefundList" parameterType="place" resultMap="getRefundList">
+		select r.m_id, m.m_name, p.p_name, r.r_total_pay, r.refund, 
+		to_char(r.r_recall_time, 'yyyy/MM/dd') r_recall_time, r.r_no, to_char(m.m_regdate, 'yyyy/MM/dd') m_regdate,
+		p.p_open, p.p_close
+		from (SELECT ROWNUM RNUM , rn.* 
+			   FROM (SELECT * 
+			      	 FROM rental 
+			         order by r_regdate desc) rn
+			         ) r, member m, place p 
+		<where>
+			r.m_id = m.m_id and p.p_num = (select p_num from stadium where s_no = r.s_no) 
+			and p.m_id = #{m_id}
+			and r.r_pay_status in (-1, 2)
+			
+			<if test='p_ok == 1'>
+				and to_char(r.r_recall_time, 'yyyy/MM') = to_char(sysdate, 'yyyy/MM')
+			</if>
+			<if test='p_ok == 2'>
+				and to_char(r.r_recall_time, 'yyyy') = #{p_open}
+			</if>
+			<if test='p_ok == 3'>
+				and to_char(r.r_recall_time, 'yyyy/MM') = #{p_open}
+			</if>
+			
+			<if test="start_row != null and start_row != ''">
+	           <if test="end_row != null and end_row != ''">
+	              and RNUM BETWEEN #{start_row} and #{end_row}
+	           </if>   
+	        </if>
+		</where>
+		order by r_recall_time desc
+	</select>
+	
+	<resultMap type="map" id="getRefundList">
+        <result column="r_no" property="r_no"/>
+        <result column="m_id" property="m_id"/>
+        <result column="m_name" property="m_name"/>
+        <result column="p_name" property="p_name"/>
+        <result column="r_total_pay" property="r_total_pay"/>
+        <result column="refund" property="refund"/>
+        <result column="r_recall_time" property="r_recall_time"/>
+        <result column="m_regdate" property="register"/>
+        <result column="p_open" property="p_open"/>
+        <result column="p_close" property="p_close"/>
+    </resultMap>
+	
+	
+	<!-- 환불 리스트 paging -->
+	<select  id="refundListCnt" parameterType="rental" resultType="int">
+		select count(*)
+		from rental
+		where r_pay_status in(-1, 2)
+	</select>
+	
+	<update id="refund_request" parameterType="int">
+		UPDATE rental
+			SET r_pay_status = 2,
+				refund = r_total_pay,
+				r_recall_time = sysdate
+		WHERE r_no = #{r_no}
+	</update>
+	
+	<delete id="deleteRental">
+		DELETE FROM rental WHERE r_no = #{r_no}
+	</delete>
+	
+	<select id="getRegdate" resultType="String">
+		select to_char(m_regdate, 'yyyy/MM/dd') register 
+		from member 
+		where m_id = #{m_id}
+	</select>
+	
+	<!-- 환불 현황 상세 페이지 -->
+	<select id="getDetailRefund" resultMap="getDetailRefund" parameterType="int">
+		select p.p_name, p.p_phone, p.p_address, m.m_name,
+		r.m_id, r.r_account, m.m_phone, to_char(r.r_regdate, 'yyyy/MM/dd') r_regdate, to_char(r.r_reserve_date, 'yyyy/MM/dd') r_reserve_date, 
+		r.r_start, s.s_hours, s.s_name, r.r_total_pay,
+		to_char(r.r_recall_time, 'yyyy/MM/dd') r_recall_time, r.refund, r.r_pay_type, r.r_bank, r.r_account, r.r_account_num, r.r_no
+		from place p, member m, rental r, stadium s
+		where p.p_num = s.p_num
+		and s.s_no = r.s_no
+		and r.m_id = m.m_id
+		and r_no = #{r_no}
+	</select>
+	<resultMap type="hashMap" id="getDetailRefund">
+        <result column="p_name" property="p_name"/>
+        <result column="p_phone" property="p_phone"/>
+        <result column="p_address" property="p_address"/>
+        <result column="m_id" property="m_id"/>
+        <result column="m_name" property="m_name"/>
+        <result column="r_account" property="r_account"/>
+        <result column="m_phone" property="m_phone"/>
+        <result column="r_regdate" property="r_regdate"/>
+        <result column="r_reserve_date" property="r_reserve_date"/>
+        <result column="r_start" property="r_start"/>
+        <result column="s_hours" property="s_hours"/>
+        <result column="s_name" property="s_name"/>
+        <result column="r_total_pay" property="r_total_pay"/>
+        <result column="r_recall_time" property="r_recall_time"/>
+        <result column="refund" property="refund"/>
+        <result column="r_pay_type" property="r_pay_type"/>
+        <result column="r_bank" property="r_bank"/>
+        <result column="r_account" property="r_account"/>
+        <result column="r_account_num" property="r_account_num"/>
+        <result column="r_no" property="r_no"/>
+    </resultMap>
+    
+    <insert id="offlineInsertRental" parameterType="rental">
+		<selectKey keyProperty="r_no" resultType="int" order="BEFORE">
+			SELECT rental_seq.nextval FROM dual
+		</selectKey>
+		INSERT INTO rental(
+			r_no,
+			s_no,
+			m_id,
+			r_reserve_date,
+			r_start,
+			r_total_pay,
+			r_pay_type,
+			r_bank,
+			r_account,
+			r_account_num,
+			r_pay_status,
+			r_regdate,
+			r_recall_time,
+			refund,
+			cal_status
+		)
+		values(
+			#{r_no},
+			#{s_no},
+			#{m_id},
+			#{r_reserve_date},
+			#{r_start},
+			0,
+			0,
+			'오프라인',
+			'오프라인',
+			'오프라인',
+			0,
+			sysdate,
+			sysdate,
+			0,
+			0
+		)
+	</insert>
+	
+</mapper>
