@@ -14,6 +14,7 @@
 		FROM (select ROWNUM RNUM, r.*
      			from (select * 
      					from calculate 
+     					where p_num in(select p_num from place where m_id = #{m_id})
      					ORDER BY c_status asc , c_regdate desc) r
      					) c 
 		
