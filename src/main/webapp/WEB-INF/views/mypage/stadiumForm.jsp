@@ -112,7 +112,7 @@
 			                	<input type="file" id="s_img1" name="file1" class="file-upload-native" accept="image/*" />
 			                	<input type="text" class="file-upload-text" placeholder="이미지 찾기" disabled />
 			                </div>
-			                <div class="preview img-wrapper"><img src="" alt="" /></div>
+			                <div class="preview img-wrapper"><img id="fileImage1" src="" alt="" /></div>
 						</td>
 					</tr>
 					<tr>
@@ -122,7 +122,7 @@
 			                	<input type="file" id="s_img2" name="file2" class="file-upload-native" accept="image/*" />
 			                	<input type="text" class="file-upload-text" placeholder="이미지 찾기" disabled />
 			                </div>
-			                <div class="preview img-wrapper"><img src="" alt="" /></div>
+			                <div class="preview img-wrapper"><img id="fileImage2" src="" alt="" /></div>
 						</td>
 					</tr>	
 					<tr>
@@ -132,7 +132,7 @@
 			                	<input type="file" id="s_img3" name="file3" class="file-upload-native" accept="image/*" />
 			                	<input type="text" class="file-upload-text" placeholder="이미지 찾기" disabled />
 			                </div>
-			                <div class="preview img-wrapper"><img src="" alt="" /></div>
+			                <div class="preview img-wrapper"><img id="fileImage3" src="" alt="" /></div>
 						</td>
 					</tr>		
 				</table>

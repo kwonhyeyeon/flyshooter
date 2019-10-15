@@ -16,8 +16,6 @@ function stadiumCheck() {
 	var snfeew= document.getElementById("s_n_fee_w");
 	var speople= document.getElementById("s_people");
 	
-	
-	
 	// 체크여부
 	if(!check(re, sdfee, "평일 주간 요금(5자~6자 이내)을 확인해주세요")){  
 		return false;
@@ -52,32 +50,6 @@ function stadiumCheck() {
 		return false;
 	}
 	
-
-	// file(s_register)type(gif, png, jpg) 제어 -> 이미지1
-	if ($("#s_img1").val() != "") {
-		var ext = $('#s_img1').val().split('.').pop().toLowerCase();
-		if ($.inArray(ext, [ 'gif', 'png', 'jpg' ]) == -1) {
-			alert('경기장 사진은 gif, png, jpg 파일만 업로드 가능 \n첫번째 사진을 교체해주세요');
-			return false;
-		}
-	}
-	// file(s_account_copy)type(gif, png, jpg) 제어 -> 이미지2
-	if ($("#s_img2").val() != "") {
-		var ext = $('#s_img2').val().split('.').pop().toLowerCase();
-		if ($.inArray(ext, [ 'gif', 'png', 'jpg' ]) == -1) {
-			alert('경기장 사진은 gif, png, jpg 파일만 업로드 가능 \n두번째 사진을 교체해주세요');
-			return false;
-		}
-	}
-	// file(s_property)type(gif, png, jpg) 제어 -> 이미지3
-	if ($("#s_img3").val() != "") {
-		var ext = $('#s_img3').val().split('.').pop().toLowerCase();
-		if ($.inArray(ext, [ 'gif', 'png', 'jpg' ]) == -1) {
-			alert('경기장 사진은 gif, png, jpg 파일만 업로드 가능 \n세번째 사진을 교체해주세요');
-			return false;
-		}
-	}
-	
 	//check 정규식에 사용
 	function check(re, what, message) {
 	    if(re.test(what.value)) {
@@ -92,17 +64,15 @@ function stadiumCheck() {
 	
 }
 
-// 이미지 프리뷰
+//이미지 프리뷰
 $(function() {
     function maskImgs() {
-        //$(".img-wrapper img").imagesLoaded({}, function() {
-	        $.each($(".img-wrapper img"), function(index, img) {
-	            var src = $(img).attr("src");
-	            var parent = $(img).parent();
-	            parent.css("background", "url(" + src + ") no-repeat center center").css("background-size", "cover");
-	            $(img).remove();
-	        });
-       //});
+		$.each($(".img-wrapper img"), function(index, img) {
+	    	var src = $(img).attr("src");
+	        var parent = $(img).parent();
+	        parent.css("background", "url(" + src + ") no-repeat center center").css("background-size", "cover");
+	        $(img).remove();
+	    });
     }
 
     var preview = {
@@ -117,7 +87,14 @@ $(function() {
             if (!path) {
                 $(uploadText).val("");
             } else {
-                path = path.replace(/^C:\\fakepath\\/, "");
+            	if($("#fileImage1") != null || $("#fileImage1") != "") {
+            		path = path.replace(/^C:\\fakepath\\/, "/uploadStorage/image1/");
+            	} else if($("#fileImage2") != null || $("#fileImage2") != "") {
+            		path = path.replace(/^C:\\fakepath\\/, "/uploadStorage/image2/");
+            	} else if($("#fileImage3") != null || $("#fileImage3") != "") {
+            		path = path.replace(/^C:\\fakepath\\/, "/uploadStorage/image3/");
+            	}
+               
                 $(uploadText).val(path);
 
                 preview.showPreview(fileInput, path, uploadText);
@@ -138,7 +115,7 @@ $(function() {
                     } else {
                         img.attr("src", e.target.result);
                     }
-
+                	
                     uploadText.val(path);
                     maskImgs();
                 };
